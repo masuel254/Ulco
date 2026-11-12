@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Notes ULCO</title>
+<meta name="theme-color" content="#12355b">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+:root{
+  --bg:#f4f6f9; --card:#fff; --ink:#16202c; --mute:#66758a; --line:#e2e7ee;
+  --brand:#12355b; --accent:#ffd166; --good:#1f8a5b; --mid:#b7791f; --bad:#c0392b; --new:#d6336c;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#0f141b; --card:#18202a; --ink:#e8edf3; --mute:#94a3b5; --line:#263140;
+    --good:#4cc38a; --mid:#e0a84a; --bad:#f07167; --new:#ff7aa8; }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);
+  padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+header{background:var(--brand);color:#fff;padding:calc(14px + env(safe-area-inset-top)) 16px 16px}
+.bar{display:flex;align-items:center;gap:10px;max-width:760px;margin:0 auto}
+.bar h1{font-size:19px;margin:0;flex:1;letter-spacing:.2px}
+.bar h1 small{display:block;font-weight:400;font-size:13px;opacity:.8}
+button{font:inherit;cursor:pointer}
+.ib{border:1px solid rgba(255,255,255,.35);background:transparent;color:#fff;border-radius:10px;padding:7px 11px;font-size:14px}
+.ib:active{background:rgba(255,255,255,.15)}
+.ib[disabled]{opacity:.5}
+main{max-width:760px;margin:0 auto;padding:14px 12px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;color:var(--mute);font-size:13px;margin-bottom:12px}
+select{font:inherit;font-size:14px;padding:7px 9px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);max-width:100%}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:14px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px}
+.tile b{display:block;font-size:26px;line-height:1.1}
+.tile span{font-size:12.5px;color:var(--mute);display:block;margin-top:4px}
+.tabs{display:flex;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:3px;margin-bottom:14px}
+.tabs button{flex:1;border:0;background:transparent;color:var(--mute);padding:8px;border-radius:9px;font-size:14.5px}
+.tabs button[aria-selected=true]{background:var(--brand);color:#fff}
+.ue{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:12px;overflow:hidden}
+.ue>h2{margin:0;padding:12px 14px;font-size:15px;display:flex;gap:10px;align-items:flex-start;border-bottom:1px solid var(--line)}
+.ue>h2 span{flex:1}
+.avg{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+.g{color:var(--good)} .m{color:var(--mid)} .b{color:var(--bad)} .n{color:var(--mute);font-weight:400}
+details{border-bottom:1px solid var(--line)}
+details:last-child{border-bottom:0}
+summary{list-style:none;display:flex;gap:10px;align-items:center;padding:10px 14px;cursor:pointer}
+summary::-webkit-details-marker{display:none}
+summary .code{font-size:12px;color:var(--mute);min-width:62px}
+summary .nom{flex:1;font-size:14.5px}
+summary .coef{font-size:12px;color:var(--mute);white-space:nowrap}
+.empty summary{cursor:default;opacity:.55}
+.evals{margin:0;padding:0 14px 10px 86px;list-style:none}
+.evals li,.flat li{display:flex;gap:10px;align-items:baseline;padding:5px 0;font-size:14px;border-top:1px dashed var(--line)}
+.evals li .t,.flat li .t{flex:1}
+.d{color:var(--mute);font-size:12.5px;white-space:nowrap}
+.badge{background:var(--new);color:#fff;border-radius:999px;font-size:10.5px;padding:1px 7px;margin-left:6px;vertical-align:middle;font-weight:600}
+.flat{list-style:none;margin:0;padding:4px 14px;background:var(--card);border:1px solid var(--line);border-radius:14px}
+.flat li:first-child{border-top:0}
+.flat .t small{display:block;color:var(--mute);font-size:12.5px}
+.msg{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+.msg.err{border-color:var(--bad)}
+.msg p{margin:0 0 8px}
+dialog{border:0;border-radius:16px;padding:18px;width:min(92vw,460px);background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog label{display:block;font-size:13px;color:var(--mute);margin-bottom:6px}
+dialog input{width:100%;font:inherit;font-size:14px;padding:9px;border-radius:9px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.row{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.pb{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:9px 14px}
+.sb{background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:9px 14px}
+footer{max-width:760px;margin:6px auto 0;padding:0 14px;color:var(--mute);font-size:12px}
+@media (max-width:480px){ .evals{padding-left:14px} summary .code{min-width:50px} }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <h1>Notes ULCO<small id="who">Relevé de notes</small></h1>
+    <button class="ib" id="refresh" aria-label="Actualiser">Actualiser</button>
+    <button class="ib" id="cfg" aria-label="Réglages">Réglages</button>
+  </div>
+</header>
+<main>
+  <div class="meta"><select id="sem" hidden aria-label="Semestre"></select><span id="stamp"></span></div>
+  <div id="alert"></div>
+  <div id="content"></div>
+</main>
+<footer>Notes indicatives, non définitives. Ceci n'est pas un bulletin officiel.</footer>
+
+<dialog id="dlg">
+  <form method="dialog" id="frm">
+    <h3 style="margin:0 0 12px">Réglages</h3>
+    <label for="hook">Adresse du relais n8n (webhook)</label>
+    <input id="hook" type="url" inputmode="url" placeholder="https://…/webhook/ulco-notes-…" autocomplete="off">
+    <div class="row">
+      <button class="sb" value="cancel" formnovalidate>Annuler</button>
+      <button class="pb" value="ok">Enregistrer</button>
+    </div>
+  </form>
+</dialog>
+
+<script type="module">
+import { parseBulletin, listSemesters } from './parse.js';
+
+const $ = (id) => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+};
+const NEW_TTL = 48 * 3600 * 1000;
+let state = store.get('ulco.data', null);   // { at, sem, semesters, bulletin }
+let view = store.get('ulco.view', 'ue');
+
+// Configuration en un clic : .../Ulco/#hook=https://...
+{
+  const m = location.hash.match(/hook=([^&]+)/);
+  if (m) {
+    store.set('ulco.hook', decodeURIComponent(m[1]));
+    history.replaceState(null, '', location.pathname);
+  }
+}
+
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const fmt = (n) => (n === null || n === undefined ? '~' : n.toFixed(2).replace('.', ','));
+const cls = (n) => (n === null || n === undefined ? 'n' : n >= 12 ? 'g' : n >= 10 ? 'm' : 'b');
+const fdate = (d) => (d ? new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '');
+const keyOf = (sem, ue, mod, e) => [sem, ue.titre.slice(0, 6), mod.code, e.date, e.nom, e.note].join('|');
+
+function ago(ts) {
+  const m = Math.round((Date.now() - ts) / 60000);
+  if (m < 1) return "à l'instant";
+  if (m < 60) return `il y a ${m} min`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `il y a ${h} h`;
+  return 'le ' + new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+
+function allEvals(b, sem) {
+  const out = [];
+  for (const ue of b.ues) for (const mod of ue.modules) for (const e of mod.evaluations) {
+    if (e.note !== null) out.push({ ...e, ue, mod, key: keyOf(sem, ue, mod, e) });
+  }
+  return out;
+}
+
+function trackNew(b, sem) {
+  const seen = store.get('ulco.seen', null);
+  const fresh = store.get('ulco.new', {});
+  const keys = allEvals(b, sem).map((e) => e.key);
+  const now = Date.now();
+  if (seen) for (const k of keys) if (!seen.includes(k)) fresh[k] = now;
+  for (const k of Object.keys(fresh)) if (now - fresh[k] > NEW_TTL) delete fresh[k];
+  store.set('ulco.new', fresh);
+  store.set('ulco.seen', [...new Set([...(seen || []), ...keys])]);
+}
+
+function render() {
+  const hook = store.get('ulco.hook', '');
+  const c = $('content');
+  if (!state) {
+    $('who').textContent = 'Relevé de notes';
+    $('stamp').textContent = '';
+    $('sem').hidden = true;
+    c.innerHTML = hook
+      ? '<div class="msg"><p>Chargement des notes…</p></div>'
+      : '<div class="msg"><p><b>Relais non configuré.</b></p><p>Ouvrez Réglages et collez l\'adresse du webhook n8n. Les notes s\'afficheront ensuite ici.</p></div>';
+    return;
+  }
+  const b = state.bulletin;
+  const fresh = store.get('ulco.new', {});
+  const badge = (k) => (fresh[k] ? '<span class="badge">nouveau</span>' : '');
+  $('who').textContent = [b.etudiant, b.intitule].filter(Boolean).join(' · ');
+  $('stamp').textContent = 'Actualisé ' + ago(state.at);
+
+  const sel = $('sem');
+  sel.hidden = state.semesters.length < 2;
+  sel.innerHTML = state.semesters.map((s) => `<option value="${esc(s.id)}"${s.id === state.sem ? ' selected' : ''}>${esc(s.label)}</option>`).join('');
+
+  const evals = allEvals(b, state.sem);
+  let html = '<div class="tiles">';
+  for (const ue of b.ues) {
+    html += `<div class="tile"><b class="${cls(ue.moyenne)}">${fmt(ue.moyenne)}</b><span>${esc(ue.titre.split(' - ')[0])}</span></div>`;
+  }
+  html += `<div class="tile"><b>${evals.length}</b><span>note${evals.length > 1 ? 's' : ''} publiée${evals.length > 1 ? 's' : ''}</span></div></div>`;
+  html += `<div class="tabs" role="tablist">
+    <button role="tab" data-v="ue" aria-selected="${view === 'ue'}">Par UE</button>
+    <button role="tab" data-v="date" aria-selected="${view === 'date'}">Dernières notes</button></div>`;
+
+  if (view === 'ue') {
+    for (const ue of b.ues) {
+      html += `<section class="ue"><h2><span>${esc(ue.titre)}</span><span class="avg ${cls(ue.moyenne)}">${fmt(ue.moyenne)}</span></h2>`;
+      for (const mod of ue.modules) {
+        const has = mod.evaluations.length > 0;
+        const isNew = mod.evaluations.some((e) => fresh[keyOf(state.sem, ue, mod, e)]);
+        html += `<details class="${has ? '' : 'empty'}"${isNew ? ' open' : ''}><summary>
+          <span class="code">${esc(mod.code)}</span><span class="nom">${esc(mod.nom)}${isNew ? '<span class="badge">nouveau</span>' : ''}</span>
+          <span class="coef">coef ${mod.coef ?? '?'}</span><span class="avg ${cls(mod.moyenne)}">${fmt(mod.moyenne)}</span></summary>`;
+        if (has) {
+          html += '<ul class="evals">' + mod.evaluations.map((e) => `<li><span class="d">${fdate(e.date)}</span>
+            <span class="t">${esc(e.nom || 'Évaluation')}${badge(keyOf(state.sem, ue, mod, e))}</span>
+            <span class="d">coef ${e.coef ?? '?'}</span>
+            <span class="avg ${cls(e.note)}">${e.note === null ? 'en attente' : fmt(e.note)}</span></li>`).join('') + '</ul>';
+        }
+        html += '</details>';
+      }
+      html += '</section>';
+    }
+  } else {
+    // Un module rattaché à plusieurs UE ne doit apparaître qu'une fois ici.
+    const uniq = new Map();
+    for (const e of evals) uniq.set([e.mod.code, e.date, e.nom, e.note].join('|'), e);
+    const list = [...uniq.values()].sort((a, z) => (z.date || '').localeCompare(a.date || ''));
+    html += list.length
+      ? '<ul class="flat">' + list.map((e) => `<li><span class="d">${fdate(e.date)}</span>
+          <span class="t">${esc(e.mod.nom)}${badge(e.key)}<small>${esc(e.mod.code)} · ${esc(e.nom || 'Évaluation')} · coef ${e.coef ?? '?'}</small></span>
+          <span class="avg ${cls(e.note)}">${fmt(e.note)}</span></li>`).join('') + '</ul>'
+      : '<div class="msg"><p>Aucune note publiée pour ce semestre.</p></div>';
+  }
+  c.innerHTML = html;
+}
+
+function alertMsg(text) {
+  $('alert').innerHTML = text ? `<div class="msg err"><p>${esc(text)}</p></div>` : '';
+}
+
+async function load(sem) {
+  const hook = store.get('ulco.hook', '');
+  if (!hook) { render(); return; }
+  const btn = $('refresh');
+  btn.disabled = true; btn.textContent = '…';
+  try {
+    const url = new URL(hook);
+    if (sem !== undefined && sem !== null) url.searchParams.set('sem', sem);
+    const r = await fetch(url, { cache: 'no-store' });
+    if (!r.ok) throw new Error(`Le relais a répondu ${r.status}.`);
+    const html = await r.text();
+    if (/tudiant inconnu/.test(html.replace(/&eacute;/g, 'é'))) throw new Error('Numéro INE inconnu du site ULCO. Vérifiez-le dans le workflow n8n.');
+    const bulletin = parseBulletin(html);
+    if (!bulletin.ues.length) throw new Error("La réponse ne contient pas de relevé. Le site ULCO a peut-être changé ou est indisponible.");
+    const semesters = listSemesters(html);
+    const cur = sem ?? (semesters.find((s) => s.selected) || semesters[0] || { id: '0' }).id;
+    trackNew(bulletin, cur);
+    state = { at: Date.now(), sem: String(cur), semesters, bulletin };
+    store.set('ulco.data', state);
+    alertMsg('');
+  } catch (e) {
+    const offline = e instanceof TypeError;
+    alertMsg((offline ? 'Relais injoignable (hors ligne, workflow n8n inactif ou adresse erronée).' : e.message) +
+      (state ? ' Affichage des dernières notes enregistrées.' : ''));
+  } finally {
+    btn.disabled = false; btn.textContent = 'Actualiser';
+    render();
+  }
+}
+
+$('refresh').onclick = () => load(state?.sem);
+$('sem').onchange = (e) => load(e.target.value);
+$('content').addEventListener('click', (e) => {
+  const t = e.target.closest('[data-v]');
+  if (t) { view = t.dataset.v; store.set('ulco.view', view); render(); }
+  if (e.target.closest('.empty summary')) e.preventDefault();
+});
+$('cfg').onclick = () => { $('hook').value = store.get('ulco.hook', ''); $('dlg').showModal(); };
+$('dlg').addEventListener('close', () => {
+  if ($('dlg').returnValue !== 'ok') return;
+  store.set('ulco.hook', $('hook').value.trim());
+  load();
+});
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden && state && Date.now() - state.at > 15 * 60000) load(state.sem);
+});
+
+render();
+load(state?.sem);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>

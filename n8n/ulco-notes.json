@@ -1,0 +1,95 @@
+{
+  "name": "Relais Notes ULCO",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "ulco-notes-CHANGEZ-MOI",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "a1f0c1d2-0001-4a00-9000-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "a1f0c1d2-0001-4a00-9000-0000000000aa"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://194.57.179.42/abs/pt.php",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "code_ine",
+              "value": "VOTRE_NUMERO_INE"
+            },
+            {
+              "name": "sem",
+              "value": "={{ /^\\d+$/.test($json.query.sem || '') ? $json.query.sem : '0' }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "a1f0c1d2-0002-4a00-9000-000000000002",
+      "name": "Releve ULCO",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.data }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/html; charset=utf-8"
+              },
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "a1f0c1d2-0003-4a00-9000-000000000003",
+      "name": "Reponse",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [440, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Releve ULCO", "type": "main", "index": 0 }]]
+    },
+    "Releve ULCO": {
+      "main": [[{ "node": "Reponse", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
