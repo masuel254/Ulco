@@ -1,6 +1,6 @@
 // Cache de la coquille de l'appli. Les notes passent toujours par le réseau
 // (le dernier relevé est gardé par l'appli elle-même pour le hors-ligne).
-const CACHE = 'ulco-v5';
+const CACHE = 'ulco-v6';
 const SHELL = ['./', 'index.html', 'parse.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
