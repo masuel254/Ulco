@@ -76,6 +76,9 @@ dialog input{width:100%;font:inherit;font-size:14px;padding:9px;border-radius:9p
 .row{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
 .pb{background:var(--brand);color:#fff;border:0;border-radius:10px;padding:9px 14px}
 .sb{background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:9px 14px}
+
+.upd{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid var(--line);font-size:13.5px}
+.upd small{color:var(--mute)}
 footer{max-width:760px;margin:6px auto 0;padding:0 14px;color:var(--mute);font-size:12px}
 @media (max-width:480px){ .evals{padding-left:14px} summary .code{min-width:50px} }
 </style>
@@ -93,13 +96,17 @@ footer{max-width:760px;margin:6px auto 0;padding:0 14px;color:var(--mute);font-s
   <div id="alert"></div>
   <div id="content"></div>
 </main>
-<footer>Notes indicatives, non définitives. Ceci n'est pas un bulletin officiel.</footer>
+<footer>Notes indicatives, non définitives. Ceci n'est pas un bulletin officiel. <span id="fver"></span></footer>
 
 <dialog id="dlg">
   <form method="dialog" id="frm">
     <h3 style="margin:0 0 12px">Réglages</h3>
     <label for="hook">Adresse du relais n8n (webhook)</label>
     <input id="hook" type="url" inputmode="url" placeholder="https://…/webhook/ulco-notes-…" autocomplete="off">
+    <div class="upd">
+      <span>Version <b id="ver"></b><br><small id="updmsg"></small></span>
+      <button class="sb" type="button" id="upd">Rechercher une mise à jour</button>
+    </div>
     <div class="row">
       <button class="sb" value="cancel" formnovalidate>Annuler</button>
       <button class="pb" value="ok">Enregistrer</button>
@@ -108,7 +115,9 @@ footer{max-width:760px;margin:6px auto 0;padding:0 14px;color:var(--mute);font-s
 </dialog>
 
 <script type="module">
-import { parseBulletin, listSemesters } from './parse.js';
+import { parseBulletin, listSemesters } from './parse.js?v=1.2.0';
+
+const APP_VERSION = '1.2.0';
 
 const $ = (id) => document.getElementById(id);
 const store = {
@@ -291,6 +300,40 @@ $('content').addEventListener('click', (e) => {
   if (t) { view = t.dataset.v; store.set('ulco.view', view); render(); }
   if (e.target.closest('.empty summary')) e.preventDefault();
 });
+// Versions : version.json est lu sans cache sur GitHub Pages.
+$('ver').textContent = APP_VERSION;
+$('fver').textContent = 'v' + APP_VERSION;
+const newer = (a, b) => {
+  const x = a.split('.').map(Number), y = b.split('.').map(Number);
+  for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0);
+  return false;
+};
+async function checkUpdate(manual) {
+  const msg = $('updmsg');
+  if (manual) msg.textContent = 'Recherche…';
+  try {
+    const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+    const v = await r.json();
+    if (!newer(v.version, APP_VERSION)) { if (manual) msg.textContent = 'Vous avez la dernière version.'; return; }
+    msg.textContent = `Mise à jour ${v.version} trouvée, installation…`;
+    if (!manual && !confirmUpdate(v)) return;
+    const reg = await navigator.serviceWorker?.getRegistration();
+    if (reg) await reg.update().catch(() => {});
+    if (window.caches) for (const k of await caches.keys()) if (k.startsWith('ulco-v')) await caches.delete(k);
+    location.reload();
+  } catch {
+    if (manual) msg.textContent = 'Impossible de joindre GitHub. Réessayez plus tard.';
+  }
+}
+function confirmUpdate(v) {
+  $('alert').innerHTML = `<div class="msg"><p>Nouvelle version ${esc(v.version)} disponible${v.notes ? ' : ' + esc(v.notes) : ''}.</p>
+    <button class="pb" id="doupd">Mettre à jour</button></div>`;
+  $('doupd').onclick = () => checkUpdate(true);
+  return false;
+}
+$('upd').onclick = () => checkUpdate(true);
+checkUpdate(false);
+
 $('cfg').onclick = () => { $('hook').value = store.get('ulco.hook', ''); $('dlg').showModal(); };
 $('dlg').addEventListener('close', () => {
   if ($('dlg').returnValue !== 'ok') return;
