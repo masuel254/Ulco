@@ -28,6 +28,25 @@ l'appareil, pour la consultation hors ligne.
 
 L'URL du webhook donne accès aux notes à qui la connaît : ne pas la publier.
 
+## Pastille de notification (iPhone)
+
+Le workflow `n8n/alertes-notes.json` vérifie le relevé à 8 h, 12 h, 17 h et 21 h (heure de Paris).
+Quand une note apparaît, il envoie une notification push sans contenu à l'appli, qui affiche
+"Nouvelle note publiée" et pose une pastille sur l'icône. La pastille s'efface à l'ouverture.
+
+- Le chemin du webhook doit reprendre le même suffixe que le relais : `ulco-notes-XXX` / `ulco-push-XXX`.
+- Clés VAPID : la clé publique est dans `index.html`, la clé privée uniquement dans n8n (nœud Signer VAPID).
+  La signature est écrite en JavaScript pur (`n8n/src/vapid.js`), sans module à autoriser dans n8n.
+- Sur iPhone, l'appli doit être installée sur l'écran d'accueil (iOS 16.4 ou plus), puis Réglages > Pastille > Activer.
+- Pour ne garder que la pastille : Réglages iPhone > Notifications > Notes ULCO, décocher bannières et sons.
+- `python3 n8n/build.py sortie.json INE SUFFIXE PRIVEE PUBLIQUE` régénère le workflow depuis `n8n/src`.
+
+## Versions
+
+`version.json` porte la dernière version publiée. L'appli la compare à la sienne à l'ouverture et via
+Réglages > Rechercher une mise à jour. À chaque publication, monter la version dans `index.html`
+(`APP_VERSION` et `parse.js?v=`) et dans `version.json`.
+
 ## Fichiers
 
 - `index.html` : interface (vue par UE, dernières notes, badge "nouveau" pendant 48 h).

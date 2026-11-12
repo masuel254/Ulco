@@ -1,0 +1,296 @@
+{
+  "name": "Alertes Notes ULCO",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "ulco-push-CHANGEZ-MOI",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "b2000000-0000-4000-8000-000000000001",
+      "name": "Abonnement",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "b2000000-0000-4000-8000-0000000000aa"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Nœud \"Enregistrer abonnement\" : reçoit l'abonnement push de l'iPhone (paramètre s, base64url),\n// le mémorise et prépare une notification de test.\nconst store = $getWorkflowStaticData('global');\nstore.subs = store.subs || [];\nconst q = $input.first().json.query || {};\n// Décodage base64url sans atob ni Buffer (disponibilité variable selon l'installation n8n).\nconst B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';\nfunction decode(s) {\n  let out = '', buf = 0, bits = 0;\n  for (const ch of String(s).replace(/\\+/g, '-').replace(/\\//g, '_').replace(/=+$/, '')) {\n    const v = B64.indexOf(ch);\n    if (v < 0) throw new Error('base64');\n    buf = ((buf << 6) | v) & 0xffffff; bits += 6;\n    if (bits >= 8) { bits -= 8; out += String.fromCharCode((buf >> bits) & 255); }\n  }\n  return out;\n}\nlet sub = null;\ntry {\n  sub = JSON.parse(decode(q.s || ''));\n} catch (e) {\n  sub = null;\n}\nconst ok = sub && typeof sub.endpoint === 'string' && /^https:\\/\\/[a-z0-9.-]+\\//i.test(sub.endpoint);\nif (!ok) return [{ json: { ok: false } }];\nstore.subs = store.subs.filter((s) => s.endpoint !== sub.endpoint);\nstore.subs.push({ endpoint: sub.endpoint, at: new Date().toISOString() });\nstore.subs = store.subs.slice(-5);\nreturn [{ json: { ok: true, endpoint: sub.endpoint } }];\n"
+      },
+      "id": "b2000000-0000-4000-8000-000000000002",
+      "name": "Enregistrer abonnement",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.ok ? 'ok' : 'abonnement invalide' }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
+              }
+            ]
+          }
+        }
+      },
+      "id": "b2000000-0000-4000-8000-000000000003",
+      "name": "Reponse abonnement",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8,12,17,21 * * *"
+            }
+          ]
+        }
+      },
+      "id": "b2000000-0000-4000-8000-000000000004",
+      "name": "Verification planifiee",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://194.57.179.42/abs/pt.php",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "code_ine",
+              "value": "VOTRE_NUMERO_INE"
+            },
+            {
+              "name": "sem",
+              "value": "0"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "b2000000-0000-4000-8000-000000000005",
+      "name": "Releve ULCO",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Nœud \"Nouvelles notes ?\" : lit le relevé, compare aux notes déjà vues,\n// et sort un élément par iPhone abonné si au moins une note est apparue.\nconst html = String($input.first().json.data || '');\nconst store = $getWorkflowStaticData('global');\nstore.subs = store.subs || [];\n\nconst clean = (s) => String(s).replace(/<[^>]*>/g, '').replace(/&[a-zA-Z#0-9]+;?/g, ' ').replace(/\\s+/g, ' ').trim();\nconst num = (s) => { const m = String(s).replace(',', '.').match(/-?\\d+(?:\\.\\d+)?/); return m ? Number(m[0]) : null; };\nconst cells = (row) => { const out = []; const re = /<td[^>]*>([\\s\\S]*?)<\\/td>/g; let m; while ((m = re.exec(row))) out.push(clean(m[1])); return out; };\n\nconst keys = [];\nlet ue = '', mod = '';\nconst re = /<tr class=\"notes_bulletin_row_(ue|mod|eval)\"[^>]*>([\\s\\S]*?)<\\/tr>/g;\nlet m;\nwhile ((m = re.exec(html))) {\n  const c = cells(m[2]);\n  if (m[1] === 'ue') ue = (c[0] || '').slice(0, 6);\n  else if (m[1] === 'mod') mod = c[1] || '';\n  else {\n    const note = num(c[5] || '');\n    if (note !== null) keys.push([ue, mod, (c[4] || '').slice(0, 10), c[3] || '', note].join('|'));\n  }\n}\n\n// Page vide ou en erreur : on ne touche à rien.\nif (!/notes_bulletin_row_ue/.test(html)) return [];\n\nconst first = !Array.isArray(store.seen);\nconst seen = new Set(store.seen || []);\nconst fresh = keys.filter((k) => !seen.has(k));\nstore.seen = [...new Set([...seen, ...keys])].slice(-500);\nstore.lastCheck = new Date().toISOString();\n\nif (first || fresh.length === 0) return [];\nstore.lastNew = { at: store.lastCheck, count: fresh.length, keys: fresh };\nreturn store.subs.map((s) => ({ json: { endpoint: s.endpoint, nouvelles: fresh.length } }));\n"
+      },
+      "id": "b2000000-0000-4000-8000-000000000006",
+      "name": "Nouvelles notes ?",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Signature VAPID (JWT ES256) en JavaScript pur, sans module ni crypto du serveur.\n// SHA-256, HMAC, ECDSA P-256 avec nonce déterministe RFC 6979 (pas besoin d'aléa).\n// Utilisé tel quel dans le nœud Code \"Signer VAPID\" du workflow n8n.\n\nfunction sha256(bytes) {\n  const K = [\n    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,\n    0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,\n    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,\n    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,\n    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85,\n    0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,\n    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,\n    0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2,\n  ];\n  const H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];\n  const len = bytes.length;\n  const total = Math.ceil((len + 9) / 64) * 64;\n  const m = new Uint8Array(total);\n  m.set(bytes);\n  m[len] = 0x80;\n  const bits = len * 8;\n  m[total - 4] = (bits >>> 24) & 255; m[total - 3] = (bits >>> 16) & 255;\n  m[total - 2] = (bits >>> 8) & 255; m[total - 1] = bits & 255;\n  m[total - 5] = Math.floor(bits / 4294967296) & 255;\n  const w = new Array(64);\n  const rot = (x, n) => (x >>> n) | (x << (32 - n));\n  for (let o = 0; o < total; o += 64) {\n    for (let i = 0; i < 16; i++) w[i] = (m[o + 4 * i] << 24) | (m[o + 4 * i + 1] << 16) | (m[o + 4 * i + 2] << 8) | m[o + 4 * i + 3];\n    for (let i = 16; i < 64; i++) {\n      const s0 = rot(w[i - 15], 7) ^ rot(w[i - 15], 18) ^ (w[i - 15] >>> 3);\n      const s1 = rot(w[i - 2], 17) ^ rot(w[i - 2], 19) ^ (w[i - 2] >>> 10);\n      w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;\n    }\n    let [a, b, c, d, e, f, g, h] = H;\n    for (let i = 0; i < 64; i++) {\n      const t1 = (h + (rot(e, 6) ^ rot(e, 11) ^ rot(e, 25)) + ((e & f) ^ (~e & g)) + K[i] + w[i]) | 0;\n      const t2 = ((rot(a, 2) ^ rot(a, 13) ^ rot(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;\n      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;\n    }\n    H[0] = (H[0] + a) | 0; H[1] = (H[1] + b) | 0; H[2] = (H[2] + c) | 0; H[3] = (H[3] + d) | 0;\n    H[4] = (H[4] + e) | 0; H[5] = (H[5] + f) | 0; H[6] = (H[6] + g) | 0; H[7] = (H[7] + h) | 0;\n  }\n  const out = new Uint8Array(32);\n  H.forEach((v, i) => { out[4 * i] = v >>> 24; out[4 * i + 1] = (v >>> 16) & 255; out[4 * i + 2] = (v >>> 8) & 255; out[4 * i + 3] = v & 255; });\n  return out;\n}\n\nfunction concat(...arrs) {\n  const out = new Uint8Array(arrs.reduce((t, a) => t + a.length, 0));\n  let o = 0;\n  for (const a of arrs) { out.set(a, o); o += a.length; }\n  return out;\n}\n\nfunction hmac(key, data) {\n  const k = new Uint8Array(64);\n  k.set(key.length > 64 ? sha256(key) : key);\n  const ip = k.map((b) => b ^ 0x36);\n  const op = k.map((b) => b ^ 0x5c);\n  return sha256(concat(op, sha256(concat(ip, data))));\n}\n\nconst P = 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffffn;\nconst N = 0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551n;\nconst A = P - 3n;\nconst G = [\n  0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296n,\n  0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5n,\n];\nconst mod = (a, m) => { const r = a % m; return r < 0n ? r + m : r; };\nfunction inv(a, m) {\n  let [r0, r1, s0, s1] = [mod(a, m), m, 1n, 0n];\n  while (r1) { const q = r0 / r1; [r0, r1] = [r1, r0 - q * r1]; [s0, s1] = [s1, s0 - q * s1]; }\n  return mod(s0, m);\n}\nfunction add(p, q) {\n  if (!p) return q;\n  if (!q) return p;\n  if (p[0] === q[0]) {\n    if (mod(p[1] + q[1], P) === 0n) return null;\n    const l = mod((3n * p[0] * p[0] + A) * inv(2n * p[1], P), P);\n    const x = mod(l * l - 2n * p[0], P);\n    return [x, mod(l * (p[0] - x) - p[1], P)];\n  }\n  const l = mod((q[1] - p[1]) * inv(q[0] - p[0], P), P);\n  const x = mod(l * l - p[0] - q[0], P);\n  return [x, mod(l * (p[0] - x) - p[1], P)];\n}\nfunction mul(k, p) {\n  let r = null;\n  let q = p;\n  while (k > 0n) { if (k & 1n) r = add(r, q); q = add(q, q); k >>= 1n; }\n  return r;\n}\nconst toInt = (b) => b.reduce((n, x) => (n << 8n) | BigInt(x), 0n);\nconst toBytes = (n) => { const o = new Uint8Array(32); for (let i = 31; i >= 0; i--) { o[i] = Number(n & 255n); n >>= 8n; } return o; };\n\nfunction sign(msgBytes, d) {\n  const h1 = sha256(msgBytes);\n  const z = mod(toInt(h1), N);\n  // RFC 6979, section 3.2\n  const x = toBytes(d);\n  const hb = toBytes(z);\n  let V = new Uint8Array(32).fill(1);\n  let K = new Uint8Array(32);\n  K = hmac(K, concat(V, [0], x, hb)); V = hmac(K, V);\n  K = hmac(K, concat(V, [1], x, hb)); V = hmac(K, V);\n  for (;;) {\n    V = hmac(K, V);\n    const k = toInt(V);\n    if (k > 0n && k < N) {\n      const R = mul(k, G);\n      const r = mod(R[0], N);\n      const s = mod(inv(k, N) * (z + r * d), N);\n      if (r && s) return concat(toBytes(r), toBytes(s));\n    }\n    K = hmac(K, concat(V, [0])); V = hmac(K, V);\n  }\n}\n\nconst B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';\nfunction b64u(bytes) {\n  let s = '';\n  for (let i = 0; i < bytes.length; i += 3) {\n    const n = (bytes[i] << 16) | ((bytes[i + 1] ?? 0) << 8) | (bytes[i + 2] ?? 0);\n    s += B64[(n >> 18) & 63] + B64[(n >> 12) & 63];\n    if (i + 1 < bytes.length) s += B64[(n >> 6) & 63];\n    if (i + 2 < bytes.length) s += B64[n & 63];\n  }\n  return s;\n}\nfunction unb64u(s) {\n  const out = [];\n  let buf = 0, bits = 0;\n  for (const ch of s.replace(/=+$/, '')) {\n    buf = (buf << 6) | B64.indexOf(ch.replace('+', '-').replace('/', '_'));\n    bits += 6;\n    if (bits >= 8) { bits -= 8; out.push((buf >> bits) & 255); }\n  }\n  return new Uint8Array(out);\n}\nconst ascii = (s) => Uint8Array.from(s, (c) => c.charCodeAt(0));\n\n// Renvoie la valeur de l'en-tête Authorization pour un point d'envoi push.\nfunction vapidAuth(endpoint, privB64u, pubB64u, subject, nowSec) {\n  const aud = endpoint.match(/^https:\\/\\/[^/]+/)[0];\n  const head = b64u(ascii(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));\n  const body = b64u(ascii(JSON.stringify({ aud, exp: nowSec + 12 * 3600, sub: subject })));\n  const sig = b64u(sign(ascii(head + '.' + body), toInt(unb64u(privB64u))));\n  return `vapid t=${head}.${body}.${sig}, k=${pubB64u}`;\n}\n\n// ---- Paramètres ----\nconst VAPID_PRIVEE = 'VAPID_PRIVEE_A_RENSEIGNER';\nconst VAPID_PUBLIQUE = 'VAPID_PUBLIQUE_A_RENSEIGNER';\nconst SUJET = 'https://masuel254.github.io/Ulco/';\n\nconst now = Math.floor(Date.now() / 1000);\nreturn $input.all()\n  .filter((it) => typeof it.json.endpoint === 'string' && it.json.endpoint.startsWith('https://'))\n  .map((it) => ({ json: { endpoint: it.json.endpoint, authorization: vapidAuth(it.json.endpoint, VAPID_PRIVEE, VAPID_PUBLIQUE, SUJET, now) } }));\n"
+      },
+      "id": "b2000000-0000-4000-8000-000000000007",
+      "name": "Signer VAPID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        680,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.endpoint }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $json.authorization }}"
+            },
+            {
+              "name": "TTL",
+              "value": "86400"
+            },
+            {
+              "name": "Urgency",
+              "value": "normal"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "b2000000-0000-4000-8000-000000000008",
+      "name": "Envoyer push",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        900,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Nœud \"Nettoyer abonnements\" : retire les iPhone désabonnés (réponse 404 ou 410).\nconst store = $getWorkflowStaticData('global');\nstore.subs = store.subs || [];\nconst sent = $('Signer VAPID').all();\nconst out = $input.all().map((it, i) => {\n  const code = it.json.statusCode;\n  const endpoint = sent[i] ? sent[i].json.endpoint : null;\n  if (endpoint && (code === 404 || code === 410)) store.subs = store.subs.filter((s) => s.endpoint !== endpoint);\n  return { json: { endpoint, statusCode: code } };\n});\nstore.lastPush = out;\nreturn out;\n"
+      },
+      "id": "b2000000-0000-4000-8000-000000000009",
+      "name": "Nettoyer abonnements",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Abonnement": {
+      "main": [
+        [
+          {
+            "node": "Enregistrer abonnement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enregistrer abonnement": {
+      "main": [
+        [
+          {
+            "node": "Reponse abonnement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reponse abonnement": {
+      "main": [
+        [
+          {
+            "node": "Signer VAPID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verification planifiee": {
+      "main": [
+        [
+          {
+            "node": "Releve ULCO",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Releve ULCO": {
+      "main": [
+        [
+          {
+            "node": "Nouvelles notes ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nouvelles notes ?": {
+      "main": [
+        [
+          {
+            "node": "Signer VAPID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Signer VAPID": {
+      "main": [
+        [
+          {
+            "node": "Envoyer push",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envoyer push": {
+      "main": [
+        [
+          {
+            "node": "Nettoyer abonnements",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Paris"
+  },
+  "pinData": {}
+}
