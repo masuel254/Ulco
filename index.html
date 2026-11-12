@@ -115,13 +115,14 @@ let state = store.get('ulco.data', null);   // { at, sem, semesters, bulletin }
 let view = store.get('ulco.view', 'ue');
 
 // Configuration en un clic : .../Ulco/#hook=https://...
-{
+function readHash() {
   const m = location.hash.match(/hook=([^&]+)/);
-  if (m) {
-    store.set('ulco.hook', decodeURIComponent(m[1]));
-    history.replaceState(null, '', location.pathname);
-  }
+  if (!m) return false;
+  store.set('ulco.hook', decodeURIComponent(m[1]).trim());
+  history.replaceState(null, '', location.pathname);
+  return true;
 }
+readHash();
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const fmt = (n) => (n === null || n === undefined ? '~' : n.toFixed(2).replace('.', ','));
@@ -248,7 +249,7 @@ async function load(sem) {
     alertMsg('');
   } catch (e) {
     const offline = e instanceof TypeError;
-    alertMsg((offline ? 'Relais injoignable (hors ligne, workflow n8n inactif ou adresse erronée).' : e.message) +
+    alertMsg((offline ? `Relais injoignable. Adresse utilisée : ${hook}. Vérifiez-la dans Réglages (elle doit contenir /webhook/ et non /webhook-test/).` : e.message) +
       (state ? ' Affichage des dernières notes enregistrées.' : ''));
   } finally {
     btn.disabled = false; btn.textContent = 'Actualiser';
@@ -269,6 +270,7 @@ $('dlg').addEventListener('close', () => {
   store.set('ulco.hook', $('hook').value.trim());
   load();
 });
+window.addEventListener('hashchange', () => { if (readHash()) load(); });
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden && state && Date.now() - state.at > 15 * 60000) load(state.sem);
 });
