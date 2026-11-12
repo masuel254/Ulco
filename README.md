@@ -30,7 +30,7 @@ L'URL du webhook donne accès aux notes à qui la connaît : ne pas la publier.
 
 ## Pastille de notification (iPhone)
 
-Le workflow `n8n/alertes-notes.json` vérifie le relevé à 8 h, 12 h, 17 h et 21 h (heure de Paris).
+Le workflow `n8n/alertes-notes.json` vérifie le relevé à 8 h, 10 h, 12 h, 15 h, 17 h, 19 h et 21 h (heure de Paris).
 Quand une note apparaît, il envoie une notification push sans contenu à l'appli, qui affiche
 "Nouvelle note publiée" et pose une pastille sur l'icône. La pastille s'efface à l'ouverture.
 

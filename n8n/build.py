@@ -28,7 +28,7 @@ nodes = [
   {"parameters": {"respondWith": "text", "responseBody": "={{ $json.ok ? 'ok' : 'abonnement invalide' }}",
      "options": {"responseHeaders": {"entries": [{"name": "Access-Control-Allow-Origin", "value": "*"}, {"name": "Cache-Control", "value": "no-store"}]}}},
    "id": "b2000000-0000-4000-8000-000000000003", "name": "Reponse abonnement", "type": "n8n-nodes-base.respondToWebhook", "typeVersion": 1.1, "position": [440, 0]},
-  {"parameters": {"rule": {"interval": [{"field": "cronExpression", "expression": "0 8,12,17,21 * * *"}]}},
+  {"parameters": {"rule": {"interval": [{"field": "cronExpression", "expression": "0 8,10,12,15,17,19,21 * * *"}]}},
    "id": "b2000000-0000-4000-8000-000000000004", "name": "Verification planifiee", "type": "n8n-nodes-base.scheduleTrigger", "typeVersion": 1.2, "position": [0, 260]},
   {"parameters": {"method": "POST", "url": "http://194.57.179.42/abs/pt.php", "sendBody": True, "contentType": "form-urlencoded",
      "bodyParameters": {"parameters": [{"name": "code_ine", "value": ine}, {"name": "sem", "value": "0"}]},
