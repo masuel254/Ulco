@@ -41,17 +41,17 @@ select{font:inherit;font-size:14px;padding:7px 9px;border-radius:9px;border:1px 
 .hero div{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .hero span{font-size:14px;color:var(--mute)}
 .hero b{font-size:38px;line-height:1;font-variant-numeric:tabular-nums}
-.latest{background:var(--card);border:2px solid var(--brand);border-radius:14px;padding:12px 14px 6px;margin-bottom:12px}
+.latest{background:var(--card);border:1.5px solid var(--brand);border-radius:14px;padding:10px 14px 4px;margin-bottom:12px}
 @media (prefers-color-scheme:dark){.latest{border-color:#4a78a8}}
-.latest h2{margin:0 0 6px;font-size:15px}
+.latest h2{margin:0 0 4px;font-size:14px}
 .latest ul{list-style:none;margin:0;padding:0}
-.latest li{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line)}
+.latest li{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
 .latest li:first-child{border-top:0}
-.latest li.isnew{background:color-mix(in srgb,var(--new) 9%,transparent);margin:0 -14px;padding:9px 14px}
+.latest li.isnew{background:color-mix(in srgb,var(--new) 9%,transparent);margin:0 -14px;padding:6px 14px}
 .latest .ln{flex:1;min-width:0}
-.latest .ln b{font-size:15px;font-weight:600}
-.latest .ln small{display:block;color:var(--mute);font-size:12.5px;margin-top:2px}
-.latest .lv{font-size:24px;font-weight:700;font-variant-numeric:tabular-nums}
+.latest .ln b{font-size:14px;font-weight:600}
+.latest .ln small{display:block;color:var(--mute);font-size:12px;margin-top:1px}
+.latest .lv{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
 .tabs{display:flex;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:3px;margin-bottom:14px}
 .tabs button{flex:1;border:0;background:transparent;color:var(--mute);padding:8px;border-radius:9px;font-size:14.5px}
 .tabs button[aria-selected=true]{background:var(--brand);color:#fff}
@@ -129,9 +129,9 @@ footer{max-width:760px;margin:6px auto 0;padding:0 14px;color:var(--mute);font-s
 </dialog>
 
 <script type="module">
-import { parseBulletin, listSemesters } from './parse.js?v=1.4.0';
+import { parseBulletin, listSemesters } from './parse.js?v=1.4.1';
 
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.4.1';
 const VAPID_PUBLIQUE = 'BAX2JtcRw3vXUI8jQuDVtKjqXcELJYl-NY0SaA8AxoQ-94jIrPLmC7NddW5KDhfV5qGogXOuz4ArQ_qiWsfQbhU';
 
 const $ = (id) => document.getElementById(id);
@@ -247,7 +247,7 @@ function render() {
   html += `<div class="tile"><b>${evals.length}</b><span>note${evals.length > 1 ? 's' : ''} publiée${evals.length > 1 ? 's' : ''}</span></div></div>`;
   html += `<div class="tabs" role="tablist">
     <button role="tab" data-v="ue" aria-selected="${view === 'ue'}">Par UE</button>
-    <button role="tab" data-v="date" aria-selected="${view === 'date'}">Dernières notes</button></div>`;
+    <button role="tab" data-v="date" aria-selected="${view === 'date'}">Toutes les notes</button></div>`;
 
   if (view === 'ue') {
     for (const ue of b.ues) {
