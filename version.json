@@ -1,1 +1,1 @@
-{ "version": "1.4.3", "notes": "7 vérifications par jour" }
+{ "version": "1.5.0", "notes": "Nombre de notes identique au relevé, « nouveau » uniquement pour les notes absentes du relevé précédent" }

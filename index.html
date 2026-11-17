@@ -129,9 +129,9 @@ footer{max-width:760px;margin:6px auto 0;padding:0 14px;color:var(--mute);font-s
 </dialog>
 
 <script type="module">
-import { parseBulletin, listSemesters } from './parse.js?v=1.4.3';
+import { parseBulletin, listSemesters } from './parse.js?v=1.5.0';
 
-const APP_VERSION = '1.4.3';
+const APP_VERSION = '1.5.0';
 const VAPID_PUBLIQUE = 'BAX2JtcRw3vXUI8jQuDVtKjqXcELJYl-NY0SaA8AxoQ-94jIrPLmC7NddW5KDhfV5qGogXOuz4ArQ_qiWsfQbhU';
 
 const $ = (id) => document.getElementById(id);
@@ -159,7 +159,6 @@ const cls = (n) => (n === null || n === undefined ? 'n' : n >= 12 ? 'g' : n >= 1
 // Poids d'une évaluation dans son module, affiché seulement s'il diffère de 1.
 const wt = (c) => (c !== null && c !== undefined && c !== 1 ? ' ×' + String(c).replace('.', ',') : '');
 const fdate = (d) => (d ? new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) : '');
-const keyOf = (sem, ue, mod, e) => [sem, ue.titre.slice(0, 6), mod.code, e.date, e.nom, e.note].join('|');
 
 function ago(ts) {
   const m = Math.round((Date.now() - ts) / 60000);
@@ -189,23 +188,46 @@ function averages(b) {
   return { ues, generale: ok.length ? ok.reduce((t, u) => t + u.moyenne, 0) / ok.length : null, nUe: ok.length };
 }
 
-function allEvals(b, sem) {
-  const out = [];
-  for (const ue of b.ues) for (const mod of ue.modules) for (const e of mod.evaluations) {
-    if (e.note !== null) out.push({ ...e, ue, mod, key: keyOf(sem, ue, mod, e) });
+// Liste des notes du relevé, une ligne par évaluation notée, comme sur le site.
+// Un module rattaché à plusieurs UE n'est compté qu'une fois (première UE où il apparaît).
+// Identifiant d'une note : semestre, module, nom de l'évaluation, valeur, rang parmi ses
+// identiques. La date n'en fait pas partie : une date corrigée par l'enseignant n'est pas
+// une nouvelle note.
+function noteIndex(b, sem) {
+  const list = [];
+  const keyOf = new Map();
+  const firstMod = new Map();
+  const rank = new Map();
+  for (const ue of b.ues) for (const mod of ue.modules) {
+    const first = firstMod.get(mod.code);
+    if (first) {
+      mod.evaluations.forEach((e, i) => { const k = first.evaluations[i] && keyOf.get(first.evaluations[i]); if (k) keyOf.set(e, k); });
+      continue;
+    }
+    firstMod.set(mod.code, mod);
+    for (const e of mod.evaluations) {
+      if (e.note === null) continue;
+      const sig = [sem, mod.code, e.nom, e.note].join('|');
+      const n = (rank.get(sig) || 0) + 1;
+      rank.set(sig, n);
+      const key = sig + '#' + n;
+      keyOf.set(e, key);
+      list.push({ ...e, ue, mod, key });
+    }
   }
-  return out;
+  return { list, keyOf };
 }
 
 function trackNew(b, sem) {
-  const seen = store.get('ulco.seen', null);
-  const fresh = store.get('ulco.new', {});
-  const keys = allEvals(b, sem).map((e) => e.key);
+  // Nouveau format d'identifiant (v1.5.0) : à la première ouverture, le relevé actuel sert de référence.
+  const seen = store.get('ulco.seen2', null);
+  const fresh = seen ? store.get('ulco.new2', {}) : {};
+  const keys = noteIndex(b, sem).list.map((e) => e.key);
   const now = Date.now();
-  if (seen) for (const k of keys) if (!seen.includes(k)) fresh[k] = now;
+  if (seen) { const old = new Set(seen); for (const k of keys) if (!old.has(k)) fresh[k] = now; }
   for (const k of Object.keys(fresh)) if (now - fresh[k] > NEW_TTL) delete fresh[k];
-  store.set('ulco.new', fresh);
-  store.set('ulco.seen', [...new Set([...(seen || []), ...keys])]);
+  store.set('ulco.new2', fresh);
+  store.set('ulco.seen2', [...new Set([...(seen || []), ...keys])]);
 }
 
 function render() {
@@ -221,8 +243,8 @@ function render() {
     return;
   }
   const b = state.bulletin;
-  const fresh = store.get('ulco.new', {});
-  const badge = (k) => (fresh[k] ? '<span class="badge">nouveau</span>' : '');
+  const fresh = store.get('ulco.new2', {});
+  const badge = (k) => (k && fresh[k] ? '<span class="badge">nouveau</span>' : '');
   $('who').textContent = [b.etudiant, b.intitule].filter(Boolean).join(' · ');
   $('stamp').textContent = 'Actualisé ' + ago(state.at);
 
@@ -230,13 +252,13 @@ function render() {
   sel.hidden = state.semesters.length < 2;
   sel.innerHTML = state.semesters.map((s) => `<option value="${esc(s.id)}"${s.id === state.sem ? ' selected' : ''}>${esc(s.label)}</option>`).join('');
 
-  const evals = allEvals(b, state.sem);
+  const { list: evals, keyOf } = noteIndex(b, state.sem);
+  const byDate = [...evals].sort((a, z) => (z.date || '').localeCompare(a.date || ''));
   const av = averages(b);
   let html = `<div class="hero"><div><span>Moyenne générale</span><b class="${cls(av.generale)}">${fmt(av.generale)}</b></div>
 </div>`;
   // Les 5 dernières notes, mises en avant sous la moyenne générale.
-  const latest = [...new Map(evals.map((e) => [[e.mod.code, e.date, e.nom, e.note].join('|'), e])).values()]
-    .sort((a, z) => (z.date || '').localeCompare(a.date || '')).slice(0, 5);
+  const latest = byDate.slice(0, 5);
   if (latest.length) {
     html += '<section class="latest"><h2>Dernières notes</h2><ul>' + latest.map((e) => `<li class="${fresh[e.key] ? 'isnew' : ''}">
       <span class="ln"><b>${esc(e.mod.nom)}</b>${badge(e.key)}<small>${fdate(e.date)} · ${esc(e.nom || e.mod.code)}${wt(e.coef)} · coef ${e.mod.coef ?? '?'}</small></span>
@@ -256,13 +278,13 @@ function render() {
       html += `<section class="ue"><h2><span>${esc(ue.titre)}</span><span class="avg ${cls(ue.moyenne)}">${fmt(ue.moyenne)}</span></h2>`;
       for (const mod of ue.modules) {
         const has = mod.evaluations.length > 0;
-        const isNew = mod.evaluations.some((e) => fresh[keyOf(state.sem, ue, mod, e)]);
+        const isNew = mod.evaluations.some((e) => fresh[keyOf.get(e)]);
         html += `<details class="${has ? '' : 'empty'}"${isNew ? ' open' : ''}><summary>
           <span class="code">${esc(mod.code)}</span><span class="nom">${esc(mod.nom)}${isNew ? '<span class="badge">nouveau</span>' : ''}</span>
           <span class="coef">coef ${mod.coef ?? '?'}</span><span class="avg ${cls(mod.moyenne)}">${fmt(mod.moyenne)}</span></summary>`;
         if (has) {
           html += '<ul class="evals">' + mod.evaluations.map((e) => `<li><span class="d">${fdate(e.date)}</span>
-            <span class="t">${esc(e.nom || 'Évaluation')}${badge(keyOf(state.sem, ue, mod, e))}</span>
+            <span class="t">${esc(e.nom || 'Évaluation')}${badge(keyOf.get(e))}</span>
             <span class="d">${e.coef !== null && e.coef !== undefined ? '×' + String(e.coef).replace('.', ',') : ''}</span>
             <span class="avg ${cls(e.note)}">${e.note === null ? 'en attente' : fmt(e.note)}</span></li>`).join('') + '</ul>';
         }
@@ -271,10 +293,7 @@ function render() {
       html += '</section>';
     }
   } else {
-    // Un module rattaché à plusieurs UE ne doit apparaître qu'une fois ici.
-    const uniq = new Map();
-    for (const e of evals) uniq.set([e.mod.code, e.date, e.nom, e.note].join('|'), e);
-    const list = [...uniq.values()].sort((a, z) => (z.date || '').localeCompare(a.date || ''));
+    const list = byDate;
     html += list.length
       ? '<ul class="flat">' + list.map((e) => `<li><span class="d">${fdate(e.date)}</span>
           <span class="t">${esc(e.mod.nom)}${badge(e.key)}<small>${esc(e.mod.code)} · ${esc(e.nom || 'Évaluation')}${wt(e.coef)} · coef ${e.mod.coef ?? '?'}</small></span>
