@@ -49,7 +49,7 @@ Réglages > Rechercher une mise à jour. À chaque publication, monter la versio
 
 ## Fichiers
 
-- `index.html` : interface (vue par UE, dernières notes, badge "nouveau" pendant 48 h).
+- `index.html` : interface (vue par UE, dernières notes, badge "nouveau" pendant 24 h).
 - `parse.js` : analyse du relevé HTML, sans dépendance.
 - `sw.js`, `manifest.webmanifest`, `icons/` : installation et mode hors ligne.
 - `n8n/ulco-notes.json` : workflow relais (3 nœuds).
